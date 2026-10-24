@@ -83,19 +83,19 @@
     function updateStatus() {
       if (markerFound && modelLoaded) {
         status.textContent =
-          "Marcador encontrado! Modelo 3D carregado. Verifique a visualização.";
+          "Marcador encontrado! Modelo 3D carregado.";
       } else if (markerFound && !modelLoaded) {
         status.textContent =
-          "Marcador encontrado! Aguardando o carregamento do modelo 3D...";
+          "Marcador encontrado! Aguardando o modelo 3D...";
       } else if (!markerFound && modelLoaded) {
         status.textContent =
-          "Modelo 3D carregado. Aponte a câmera para o marcador IFRJ.";
+          "Modelo 3D carregado. Aponte para o marcador IFRJ.";
       }
     }
 
     scene.addEventListener("loaded", () => {
       status.textContent =
-        "Cena iniciada. Aguardando a câmera e o modelo 3D...";
+        "Cena iniciada. Aguardando câmera e modelo 3D...";
     });
 
     scene.addEventListener("arReady", () => {
@@ -105,7 +105,7 @@
 
     scene.addEventListener("arError", (event) => {
       status.textContent =
-        "Erro na inicialização da realidade aumentada.";
+        "Erro ao iniciar a realidade aumentada.";
       console.error("Erro MindAR:", event);
     });
 
@@ -124,10 +124,9 @@
     model.addEventListener("model-loaded", () => {
       modelLoaded = true;
 
-      // Escala temporária de teste: aumentada para facilitar a visualização.
-      model.setAttribute("scale", "1 1 1");
+      // Mantém a escala reduzida, sem aumentá-la novamente.
+      model.setAttribute("scale", "0.15 0.15 0.15");
 
-      // Informa quantas animações estão disponíveis no arquivo.
       const gltf = model.getObject3D("mesh");
       const animations = gltf && gltf.animations
         ? gltf.animations
@@ -141,12 +140,11 @@
       );
 
       if (animations.length > 0) {
-        status.textContent =
-          "Modelo carregado! " + animations.length +
-          " animação(ões) encontrada(s).";
+        console.log("O arquivo contém animações incorporadas.");
       } else {
-        status.textContent =
-          "Modelo carregado, mas o arquivo não contém animações.";
+        console.warn(
+          "O arquivo não contém animações incorporadas."
+        );
       }
 
       updateStatus();
@@ -154,11 +152,10 @@
 
     model.addEventListener("model-error", (event) => {
       status.textContent =
-        "Erro ao carregar o modelo 3D. Verifique o endereço do GLB.";
+        "Erro ao carregar o modelo 3D. Verifique o arquivo GLB.";
       console.error("Erro no carregamento do GLB:", event);
     });
 
-    // Detecta erros gerais que podem ajudar no diagnóstico.
     window.addEventListener("error", (event) => {
       console.error("Erro JavaScript:", event.message);
     });

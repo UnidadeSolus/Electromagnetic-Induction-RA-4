@@ -89,7 +89,7 @@
           "Marcador encontrado! Aguardando o modelo 3D...";
       } else if (!markerFound && modelLoaded) {
         status.textContent =
-          "Modelo 3D carregado. Aponte para o marcador IFRJ.";
+          "Modelo 3D carregado. Aponte a câmera para o marcador IFRJ.";
       }
     }
 
@@ -124,8 +124,8 @@
     model.addEventListener("model-loaded", () => {
       modelLoaded = true;
 
-      // Mantém a escala reduzida, sem aumentá-la novamente.
-      model.setAttribute("scale", "0.15 0.15 0.15");
+      // Escala definida em 0.30, sem redução posterior.
+      model.setAttribute("scale", "0.30 0.30 0.30");
 
       const gltf = model.getObject3D("mesh");
       const animations = gltf && gltf.animations

@@ -64,7 +64,7 @@
         src="#magneticFieldModel"
         position="0 0 0.12"
         rotation="0 0 0"
-        scale="0.60 0.60 0.60"
+        scale="0.50 0.50 0.50"
         animation-mixer="clip: *; loop: repeat; timeScale: 1">
       </a-gltf-model>
 
@@ -125,7 +125,7 @@
       modelLoaded = true;
 
       // Escala definida em 0.60, sem redução posterior.
-      model.setAttribute("scale", "0.60 0.60 0.60");
+      model.setAttribute("scale", "0.50 0.50 0.50");
 
       const gltf = model.getObject3D("mesh");
       const animations = gltf && gltf.animations

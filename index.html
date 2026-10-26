@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -28,63 +27,59 @@
       padding: 10px;
       background: rgba(0, 0, 0, 0.85);
       color: white;
-      font-size: 14px;
+      font: 14px Arial, sans-serif;
       border-radius: 8px;
       pointer-events: none;
     }
 
-    /* Painel vertical de velocidade */
+    /* Controle vertical compacto: rápido em cima, lento embaixo. */
     #speedPanel {
       position: fixed;
       z-index: 10000;
-      right: 14px;
-      bottom: 22px;
-      width: 76px;
-      height: 245px;
-      padding: 12px 8px;
+      right: 12px;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      width: 62px;
+      height: 220px;
       box-sizing: border-box;
+      padding: 10px 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      color: white;
-      background: rgba(0, 0, 0, 0.78);
-      border: 1px solid rgba(255,255,255,0.35);
-      border-radius: 14px;
+      gap: 5px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.76);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 12px;
       backdrop-filter: blur(5px);
       -webkit-backdrop-filter: blur(5px);
-      touch-action: pan-x;
+      touch-action: none;
     }
 
-    #speedTitle {
-      font-size: 10px;
+    .speed-label {
+      font-size: 11px;
       font-weight: bold;
-      text-align: center;
-      letter-spacing: 0.5px;
+      line-height: 1;
     }
 
     #speedValue {
-      font-size: 15px;
-      font-weight: bold;
+      font-size: 12px;
       color: #70c5ff;
+      font-weight: bold;
     }
 
-    #speedDescription {
-      font-size: 10px;
-      text-align: center;
-      line-height: 1.3;
-    }
-
+    /* writing-mode deixa a própria barra vertical em navegadores móveis modernos. */
     #speedSlider {
-      appearance: slider-vertical;
       -webkit-appearance: slider-vertical;
+      appearance: slider-vertical;
       writing-mode: vertical-lr;
       direction: rtl;
-      width: 30px;
-      height: 125px;
+      width: 28px;
+      height: 132px;
       margin: 0;
-      cursor: pointer;
+      padding: 0;
       accent-color: #40A5FF;
+      cursor: pointer;
       touch-action: none;
     }
 
@@ -93,19 +88,13 @@
       outline-offset: 3px;
     }
 
-    #speedMax, #speedMin {
-      font-size: 10px;
-      color: #dddddd;
-    }
-
     @media (max-height: 500px) {
       #speedPanel {
-        height: 190px;
+        height: 175px;
         bottom: 8px;
       }
-
       #speedSlider {
-        height: 85px;
+        height: 95px;
       }
     }
   </style>
@@ -114,23 +103,18 @@
 <body>
   <div id="status">Iniciando realidade aumentada...</div>
 
-  <div id="speedPanel">
-    <div id="speedTitle">VELOCIDADE</div>
-    <div id="speedValue">20,0×</div>
-    <div id="speedMax">MAIS RÁPIDA</div>
-
+  <div id="speedPanel" aria-label="Controle de velocidade da animação">
+    <div class="speed-label">RÁPIDO</div>
+    <div id="speedValue">100×</div>
     <input
       id="speedSlider"
       type="range"
-      min="0.1"
-      max="20"
-      step="0.1"
-      value="20"
-      orient="vertical"
-      aria-label="Velocidade da animação 3D">
-
-    <div id="speedMin">MAIS LENTA</div>
-    <div id="speedDescription">Arraste para ajustar</div>
+      min="1"
+      max="100"
+      step="1"
+      value="100"
+      aria-label="Velocidade da animação: rápido no topo e lento embaixo">
+    <div class="speed-label">LENTO</div>
   </div>
 
   <a-scene
@@ -148,10 +132,7 @@
       </a-asset-item>
     </a-assets>
 
-    <a-camera
-      position="0 0 0"
-      look-controls="enabled: false">
-    </a-camera>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-gltf-model
@@ -160,60 +141,49 @@
         position="0 0 0.12"
         rotation="0 0 0"
         scale="0.38 0.38 0.38"
-        animation-mixer="clip: *; loop: repeat; timeScale: 20">
+        animation-mixer="clip: *; loop: repeat; timeScale: 100">
       </a-gltf-model>
     </a-entity>
-
   </a-scene>
 
   <script>
     const status = document.getElementById("status");
     const scene = document.querySelector("a-scene");
     const model = document.getElementById("magneticField");
-
     const speedSlider = document.getElementById("speedSlider");
     const speedValue = document.getElementById("speedValue");
-    const speedDescription = document.getElementById("speedDescription");
-    const speedMax = document.getElementById("speedMax");
 
     let markerFound = false;
     let modelLoaded = false;
     let colorTimer = null;
     let isBlue = true;
     let colorTargets = [];
-    let currentSpeed = 20;
+    let currentSpeed = 100;
 
+    // Em velocidade 1×, cada cor dura 4,5 s.
+    // Em 100×, alterna a cada 45 ms, acompanhando a escala de velocidade.
     const BASE_COLOR_DURATION = 4500;
     const BLUE_COLOR = "#40A5FF";
     const RED_COLOR = "#FF3030";
 
     function updateStatus() {
       if (markerFound && modelLoaded) {
-        status.textContent =
-          "Marcador encontrado! Modelo 3D carregado.";
+        status.textContent = "Marcador encontrado! Modelo 3D carregado.";
       } else if (markerFound && !modelLoaded) {
-        status.textContent =
-          "Marcador encontrado! Aguardando o modelo 3D...";
+        status.textContent = "Marcador encontrado! Aguardando o modelo 3D...";
       } else if (!markerFound && modelLoaded) {
-        status.textContent =
-          "Modelo 3D carregado. Aponte a câmera para o marcador IFRJ.";
+        status.textContent = "Modelo 3D carregado. Aponte a câmera para o marcador IFRJ.";
       }
     }
 
     function inspectModel() {
       const gltf = model.getObject3D("mesh");
       colorTargets = [];
-
-      if (!gltf) {
-        console.warn("A malha 3D ainda não está disponível.");
-        return;
-      }
+      if (!gltf) return;
 
       gltf.traverse((object) => {
         if (!object.isMesh) return;
-
         const name = (object.name || "").toLowerCase();
-        console.log("Malha encontrada:", object.name);
 
         if (
           name.includes("semicirculo") ||
@@ -229,147 +199,82 @@
         }
       });
 
-      console.log(
-        "Malhas selecionadas para mudança de cor:",
-        colorTargets.map(object => object.name)
-      );
+      console.log("Malhas selecionadas para mudança de cor:", colorTargets.map(o => o.name));
     }
 
     function applyModelColor(hexColor) {
       if (colorTargets.length === 0) return;
 
       colorTargets.forEach((object) => {
-        const materials = Array.isArray(object.material)
-          ? object.material
-          : [object.material];
-
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
         materials.forEach((material) => {
           if (!material || !material.color) return;
-
           material.color.set(hexColor);
           material.needsUpdate = true;
         });
       });
     }
 
-    // O tempo entre as mudanças de cor acompanha a velocidade.
     function restartColorTimer() {
       if (colorTimer !== null) {
         clearInterval(colorTimer);
         colorTimer = null;
       }
-
       if (!modelLoaded) return;
 
-      const duration = Math.max(
-        50,
-        BASE_COLOR_DURATION / currentSpeed
-      );
-
+      const duration = Math.max(16, BASE_COLOR_DURATION / currentSpeed);
       colorTimer = setInterval(() => {
         isBlue = !isBlue;
         applyModelColor(isBlue ? BLUE_COLOR : RED_COLOR);
-
-        console.log(
-          "Cor atual:",
-          isBlue ? "azul" : "vermelho",
-          "| Velocidade:",
-          currentSpeed.toFixed(1) + "x"
-        );
       }, duration);
     }
 
     function updateSpeed(value) {
       currentSpeed = Number(value);
+      speedValue.textContent = currentSpeed + "×";
 
-      speedValue.textContent =
-        currentSpeed.toLocaleString("pt-BR", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1
-        }) + "×";
-
-      if (currentSpeed >= 15) {
-        speedDescription.textContent = "Quase estática";
-        speedMax.textContent = "MUITO RÁPIDA";
-      } else if (currentSpeed >= 5) {
-        speedDescription.textContent = "Movimento rápido";
-        speedMax.textContent = "RÁPIDA";
-      } else if (currentSpeed >= 1) {
-        speedDescription.textContent = "Observe as linhas";
-        speedMax.textContent = "NORMAL";
+      const mixerComponent = model.components["animation-mixer"];
+      if (mixerComponent && mixerComponent.mixer) {
+        mixerComponent.mixer.timeScale = currentSpeed;
       } else {
-        speedDescription.textContent = "Movimento lento";
-        speedMax.textContent = "LENTA";
+        model.setAttribute("animation-mixer", "timeScale", currentSpeed);
       }
 
-      // Altera a velocidade da animação incorporada ao GLB.
-      const mixer = model.components["animation-mixer"];
-
-      if (mixer && mixer.mixer) {
-        mixer.mixer.timeScale = currentSpeed;
-      } else {
-        model.setAttribute(
-          "animation-mixer",
-          "timeScale",
-          currentSpeed
-        );
-      }
-
-      // Mantém a alternância das cores proporcional à velocidade.
       restartColorTimer();
     }
 
-    speedSlider.addEventListener("input", () => {
-      updateSpeed(speedSlider.value);
-    });
+    speedSlider.addEventListener("input", () => updateSpeed(speedSlider.value));
 
     scene.addEventListener("loaded", () => {
-      status.textContent =
-        "Cena iniciada. Aguardando câmera e modelo 3D...";
+      status.textContent = "Cena iniciada. Aguardando câmera e modelo 3D...";
     });
 
     scene.addEventListener("arReady", () => {
-      status.textContent =
-        "Câmera pronta. Aponte para o marcador IFRJ.";
+      status.textContent = "Câmera pronta. Aponte para o marcador IFRJ.";
     });
 
     scene.addEventListener("arError", (event) => {
-      status.textContent =
-        "Erro ao iniciar a realidade aumentada.";
+      status.textContent = "Erro ao iniciar a realidade aumentada.";
       console.error("Erro MindAR:", event);
     });
 
     scene.addEventListener("targetFound", () => {
       markerFound = true;
       updateStatus();
-      console.log("Marcador IFRJ encontrado!");
     });
 
     scene.addEventListener("targetLost", () => {
       markerFound = false;
       updateStatus();
-      console.log("Marcador perdido.");
     });
 
     model.addEventListener("model-loaded", () => {
       modelLoaded = true;
-
       model.setAttribute("scale", "0.38 0.38 0.38");
       model.setAttribute("position", "0 0 0.12");
 
       const gltf = model.getObject3D("mesh");
-      const animations = gltf && gltf.animations
-        ? gltf.animations
-        : [];
-
-      console.log("Modelo GLB carregado:", gltf);
-      console.log(
-        "Animações disponíveis:",
-        animations.map(animation => ({
-          nome: animation.name,
-          duração: animation.duration
-        }))
-      );
+      console.log("Animações GLB:", gltf?.animations?.map(a => ({ nome: a.name, duração: a.duration })));
 
       inspectModel();
       updateSpeed(speedSlider.value);
@@ -377,19 +282,14 @@
     });
 
     model.addEventListener("model-error", (event) => {
-      status.textContent =
-        "Erro ao carregar o modelo 3D. Verifique o arquivo GLB.";
+      status.textContent = "Erro ao carregar o modelo 3D. Verifique o arquivo GLB.";
       console.error("Erro no carregamento do GLB:", event);
     });
 
-    window.addEventListener("error", (event) => {
-      console.error("Erro JavaScript:", event.message);
-    });
+    window.addEventListener("error", (event) => console.error("Erro JavaScript:", event.message));
 
     window.addEventListener("beforeunload", () => {
-      if (colorTimer !== null) {
-        clearInterval(colorTimer);
-      }
+      if (colorTimer !== null) clearInterval(colorTimer);
     });
   </script>
 </body>

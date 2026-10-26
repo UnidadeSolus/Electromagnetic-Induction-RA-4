@@ -79,12 +79,9 @@
     let modelLoaded = false;
     let colorTimer = null;
     let isBlue = true;
+    let colorTargets = [];
 
-    // Duração de cada cor: 4,5 segundos.
-    // O ciclo completo de azul e vermelho dura 9 segundos.
     const COLOR_DURATION = 4500;
-
-    // Cores aplicadas diretamente aos materiais do modelo.
     const BLUE_COLOR = "#40A5FF";
     const RED_COLOR = "#FF3030";
 
@@ -101,43 +98,75 @@
       }
     }
 
-    // Aplica a cor aos materiais dos objetos 3D.
-    function applyModelColor(hexColor) {
+    // Identifica os objetos 3D e registra seus nomes.
+    function inspectModel() {
       const gltf = model.getObject3D("mesh");
+      colorTargets = [];
 
-      if (!gltf) return;
-
-      const color = new THREE.Color(hexColor);
+      if (!gltf) {
+        console.warn("A malha 3D ainda não está disponível.");
+        return;
+      }
 
       gltf.traverse((object) => {
-        if (!object.isMesh || !object.material) return;
+        if (!object.isMesh) return;
 
+        console.log("Malha encontrada:", object.name);
+
+        const name = (object.name || "").toLowerCase();
+
+        // Prioriza malhas cujo nome indica semicírculos,
+        // arcos ou linhas do campo magnético.
+        if (
+          name.includes("semicirculo") ||
+          name.includes("semicírculo") ||
+          name.includes("semi-circle") ||
+          name.includes("semicircle") ||
+          name.includes("arc") ||
+          name.includes("arco") ||
+          name.includes("field") ||
+          name.includes("linha")
+        ) {
+          colorTargets.push(object);
+        }
+      });
+
+      // Se os objetos não tiverem nomes reconhecíveis,
+      // não pinta tudo automaticamente: preserva o modelo.
+      console.log(
+        "Malhas selecionadas para mudança de cor:",
+        colorTargets.map(object => object.name)
+      );
+    }
+
+    // Altera apenas os materiais dos objetos selecionados.
+    function applyModelColor(hexColor) {
+      if (colorTargets.length === 0) {
+        console.warn(
+          "Nenhuma malha de semicírculo identificada. " +
+          "As cores originais foram preservadas."
+        );
+        return;
+      }
+
+      colorTargets.forEach((object) => {
         const materials = Array.isArray(object.material)
           ? object.material
           : [object.material];
 
         materials.forEach((material) => {
-          if (material.color) {
-            material.color.copy(color);
-          }
+          if (!material || !material.color) return;
 
-          // Emissão suave para ajudar a cor a aparecer
-          // mesmo sob iluminação variável.
-          if (material.emissive) {
-            material.emissive.copy(color);
-            material.emissiveIntensity = 0.35;
-          }
-
+          material.color.set(hexColor);
           material.needsUpdate = true;
         });
       });
     }
 
-    // Alterna azul e vermelho continuamente.
     function startColorAnimation() {
-      // Evita criar vários temporizadores.
       if (colorTimer !== null) {
         clearInterval(colorTimer);
+        colorTimer = null;
       }
 
       isBlue = true;
@@ -188,8 +217,9 @@
     model.addEventListener("model-loaded", () => {
       modelLoaded = true;
 
-      // Mantém a escala original.
+      // Mantém a escala e a posição que já funcionavam.
       model.setAttribute("scale", "0.38 0.38 0.38");
+      model.setAttribute("position", "0 0 0.12");
 
       const gltf = model.getObject3D("mesh");
       const animations = gltf && gltf.animations
@@ -202,20 +232,14 @@
         "Animações disponíveis:",
         animations.map(animation => ({
           nome: animation.name,
-          duracao: animation.duration
+          duração: animation.duration
         }))
       );
 
-      if (animations.length > 0) {
-        console.log("Animação de movimento incorporada encontrada.");
-      } else {
-        console.warn("Nenhuma animação incorporada foi encontrada.");
-      }
+      inspectModel();
 
-      // Corrige a cor pelo JavaScript, independentemente
-      // do suporte do carregador à animação de materiais.
+      // Inicia a alternância somente depois do carregamento.
       startColorAnimation();
-
       updateStatus();
     });
 
@@ -229,13 +253,12 @@
       console.error("Erro JavaScript:", event.message);
     });
 
-    // Limpa o temporizador caso a página seja encerrada.
     window.addEventListener("beforeunload", () => {
       if (colorTimer !== null) {
         clearInterval(colorTimer);
       }
     });
   </script>
-
 </body>
 </html>
+

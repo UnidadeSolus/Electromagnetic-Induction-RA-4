@@ -1,42 +1,241 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Realidade Aumentada - Campo Eletromagnético</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realidade Aumentada - Indução Eletromagnética</title>
+
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+
   <style>
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #status {
+      position: fixed;
+      z-index: 9999;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      font: 14px Arial, sans-serif;
+      border-radius: 8px;
+      pointer-events: none;
+    }
   </style>
 </head>
+
 <body>
+  <div id="status">Iniciando realidade aumentada...</div>
+
   <a-scene
     mindar-image="imageTargetSrc: https://raw.githubusercontent.com/UnidadeSolus/Electromagnetic-Induction-RA-4/main/IFRJ.mind;"
     color-space="sRGB"
-    renderer="colorManagement: true, physicallyCorrectLights"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
     vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false">
-    <a-assets>
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false">
+
+    <a-assets timeout="30000">
       <a-asset-item
         id="magneticFieldModel"
-        src="https://raw.githubusercontent.com/UnidadeSolus/Electromagnetic-Induction-RA-4/main/Campo_Eletromagnetico_Oscilante_Final.glb"
-        crossorigin="anonymous">
+        src="https://raw.githubusercontent.com/UnidadeSolus/Electromagnetic-Induction-RA-4/main/Electromagnetic-Induction-3D.glb">
       </a-asset-item>
     </a-assets>
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <!-- Marcador físico usado apenas para rastreamento; sem imagem duplicada -->
+
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
+
     <a-entity mindar-image-target="targetIndex: 0">
       <a-gltf-model
         id="magneticField"
         src="#magneticFieldModel"
         position="0 0 0.12"
         rotation="0 0 0"
-        scale="0.15 0.15 0.15"
+        scale="0.38 0.38 0.38"
         animation-mixer="clip: *; loop: repeat; timeScale: 1">
       </a-gltf-model>
     </a-entity>
+
   </a-scene>
+
+  <script>
+    const status = document.getElementById("status");
+    const scene = document.querySelector("a-scene");
+    const model = document.getElementById("magneticField");
+
+    let markerFound = false;
+    let modelLoaded = false;
+    let colorTimer = null;
+    let isBlue = true;
+
+    // Duração de cada cor: 4,5 segundos.
+    // O ciclo completo de azul e vermelho dura 9 segundos.
+    const COLOR_DURATION = 4500;
+
+    // Cores aplicadas diretamente aos materiais do modelo.
+    const BLUE_COLOR = "#40A5FF";
+    const RED_COLOR = "#FF3030";
+
+    function updateStatus() {
+      if (markerFound && modelLoaded) {
+        status.textContent =
+          "Marcador encontrado! Modelo 3D carregado.";
+      } else if (markerFound && !modelLoaded) {
+        status.textContent =
+          "Marcador encontrado! Aguardando o modelo 3D...";
+      } else if (!markerFound && modelLoaded) {
+        status.textContent =
+          "Modelo 3D carregado. Aponte a câmera para o marcador IFRJ.";
+      }
+    }
+
+    // Aplica a cor aos materiais dos objetos 3D.
+    function applyModelColor(hexColor) {
+      const gltf = model.getObject3D("mesh");
+
+      if (!gltf) return;
+
+      const color = new THREE.Color(hexColor);
+
+      gltf.traverse((object) => {
+        if (!object.isMesh || !object.material) return;
+
+        const materials = Array.isArray(object.material)
+          ? object.material
+          : [object.material];
+
+        materials.forEach((material) => {
+          if (material.color) {
+            material.color.copy(color);
+          }
+
+          // Emissão suave para ajudar a cor a aparecer
+          // mesmo sob iluminação variável.
+          if (material.emissive) {
+            material.emissive.copy(color);
+            material.emissiveIntensity = 0.35;
+          }
+
+          material.needsUpdate = true;
+        });
+      });
+    }
+
+    // Alterna azul e vermelho continuamente.
+    function startColorAnimation() {
+      // Evita criar vários temporizadores.
+      if (colorTimer !== null) {
+        clearInterval(colorTimer);
+      }
+
+      isBlue = true;
+      applyModelColor(BLUE_COLOR);
+
+      colorTimer = setInterval(() => {
+        isBlue = !isBlue;
+
+        applyModelColor(
+          isBlue ? BLUE_COLOR : RED_COLOR
+        );
+
+        console.log(
+          "Cor atual:",
+          isBlue ? "azul" : "vermelho"
+        );
+      }, COLOR_DURATION);
+    }
+
+    scene.addEventListener("loaded", () => {
+      status.textContent =
+        "Cena iniciada. Aguardando câmera e modelo 3D...";
+    });
+
+    scene.addEventListener("arReady", () => {
+      status.textContent =
+        "Câmera pronta. Aponte para o marcador IFRJ.";
+    });
+
+    scene.addEventListener("arError", (event) => {
+      status.textContent =
+        "Erro ao iniciar a realidade aumentada.";
+      console.error("Erro MindAR:", event);
+    });
+
+    scene.addEventListener("targetFound", () => {
+      markerFound = true;
+      updateStatus();
+      console.log("Marcador IFRJ encontrado!");
+    });
+
+    scene.addEventListener("targetLost", () => {
+      markerFound = false;
+      updateStatus();
+      console.log("Marcador perdido.");
+    });
+
+    model.addEventListener("model-loaded", () => {
+      modelLoaded = true;
+
+      // Mantém a escala original.
+      model.setAttribute("scale", "0.38 0.38 0.38");
+
+      const gltf = model.getObject3D("mesh");
+      const animations = gltf && gltf.animations
+        ? gltf.animations
+        : [];
+
+      console.log("Modelo GLB carregado:", gltf);
+      console.log("Quantidade de animações:", animations.length);
+      console.log(
+        "Animações disponíveis:",
+        animations.map(animation => ({
+          nome: animation.name,
+          duracao: animation.duration
+        }))
+      );
+
+      if (animations.length > 0) {
+        console.log("Animação de movimento incorporada encontrada.");
+      } else {
+        console.warn("Nenhuma animação incorporada foi encontrada.");
+      }
+
+      // Corrige a cor pelo JavaScript, independentemente
+      // do suporte do carregador à animação de materiais.
+      startColorAnimation();
+
+      updateStatus();
+    });
+
+    model.addEventListener("model-error", (event) => {
+      status.textContent =
+        "Erro ao carregar o modelo 3D. Verifique o arquivo GLB.";
+      console.error("Erro no carregamento do GLB:", event);
+    });
+
+    window.addEventListener("error", (event) => {
+      console.error("Erro JavaScript:", event.message);
+    });
+
+    // Limpa o temporizador caso a página seja encerrada.
+    window.addEventListener("beforeunload", () => {
+      if (colorTimer !== null) {
+        clearInterval(colorTimer);
+      }
+    });
+  </script>
+
 </body>
 </html>

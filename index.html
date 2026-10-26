@@ -32,69 +32,110 @@
       pointer-events: none;
     }
 
-    /* Controle vertical compacto: rápido em cima, lento embaixo. */
+    /* Controle horizontal fixo na parte inferior da tela do celular. */
     #speedPanel {
       position: fixed;
       z-index: 10000;
-      right: 12px;
-      bottom: max(18px, env(safe-area-inset-bottom));
-      width: 62px;
-      height: 220px;
+      left: max(14px, env(safe-area-inset-left));
+      right: max(14px, env(safe-area-inset-right));
+      bottom: max(14px, env(safe-area-inset-bottom));
       box-sizing: border-box;
-      padding: 10px 6px;
+      padding: 10px 14px 12px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      gap: 5px;
+      gap: 8px;
       color: #fff;
       background: rgba(0, 0, 0, 0.76);
       border: 1px solid rgba(255, 255, 255, 0.35);
       border-radius: 12px;
       backdrop-filter: blur(5px);
       -webkit-backdrop-filter: blur(5px);
-      touch-action: none;
+      touch-action: pan-y;
+    }
+
+    #speedLabels {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      width: 100%;
     }
 
     .speed-label {
-      font-size: 11px;
-      font-weight: bold;
-      line-height: 1;
-    }
-
-    #speedValue {
       font-size: 12px;
-      color: #70c5ff;
       font-weight: bold;
+      line-height: 1.15;
+      white-space: nowrap;
     }
 
-    /* writing-mode deixa a própria barra vertical em navegadores móveis modernos. */
+    .speed-label span {
+      display: block;
+      margin-top: 2px;
+      font-size: 10px;
+      font-weight: normal;
+      opacity: 0.9;
+    }
+
     #speedSlider {
-      -webkit-appearance: slider-vertical;
-      appearance: slider-vertical;
-      writing-mode: vertical-lr;
-      direction: rtl;
-      width: 28px;
-      height: 132px;
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      width: 100%;
+      height: 24px;
       margin: 0;
       padding: 0;
-      accent-color: #40A5FF;
+      background: transparent;
       cursor: pointer;
-      touch-action: none;
+      touch-action: pan-y;
+    }
+
+    #speedSlider::-webkit-slider-runnable-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.38);
+      border-radius: 999px;
+    }
+
+    #speedSlider::-moz-range-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.38);
+      border-radius: 999px;
+    }
+
+    #speedSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      margin-top: -8px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #40A5FF;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+
+    #speedSlider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #40A5FF;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
     }
 
     #speedSlider:focus-visible {
       outline: 2px solid white;
-      outline-offset: 3px;
+      outline-offset: 4px;
+      border-radius: 6px;
     }
 
-    @media (max-height: 500px) {
+    @media (max-width: 360px) {
       #speedPanel {
-        height: 175px;
-        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        padding: 9px 10px 10px;
       }
-      #speedSlider {
-        height: 95px;
+      .speed-label {
+        font-size: 11px;
       }
     }
   </style>
@@ -103,18 +144,19 @@
 <body>
   <div id="status">Iniciando realidade aumentada...</div>
 
-  <div id="speedPanel" aria-label="Controle de velocidade da animação">
-    <div class="speed-label">RÁPIDO</div>
-    <div id="speedValue">100×</div>
+  <div id="speedPanel" aria-label="Controle entre visão didática e visão real">
+    <div id="speedLabels">
+      <div class="speed-label">DIDÁTICO<span>(lento)</span></div>
+      <div class="speed-label" style="text-align: right">REAL<span>(rápido)</span></div>
+    </div>
     <input
       id="speedSlider"
       type="range"
       min="1"
-      max="100"
+      max="10"
       step="1"
-      value="100"
-      aria-label="Velocidade da animação: rápido no topo e lento embaixo">
-    <div class="speed-label">LENTO</div>
+      value="1"
+      aria-label="Arraste da visão didática, mais lenta, para a visão real, mais rápida">
   </div>
 
   <a-scene
@@ -141,7 +183,7 @@
         position="0 0 0.12"
         rotation="0 0 0"
         scale="0.38 0.38 0.38"
-        animation-mixer="clip: *; loop: repeat; timeScale: 100">
+        animation-mixer="clip: *; loop: repeat; timeScale: 1">
       </a-gltf-model>
     </a-entity>
   </a-scene>
@@ -151,17 +193,16 @@
     const scene = document.querySelector("a-scene");
     const model = document.getElementById("magneticField");
     const speedSlider = document.getElementById("speedSlider");
-    const speedValue = document.getElementById("speedValue");
 
     let markerFound = false;
     let modelLoaded = false;
     let colorTimer = null;
     let isBlue = true;
     let colorTargets = [];
-    let currentSpeed = 100;
+    let currentSpeed = 1;
 
-    // Em velocidade 1×, cada cor dura 4,5 s.
-    // Em 100×, alterna a cada 45 ms, acompanhando a escala de velocidade.
+    // Visão didática: velocidade normal (1×). Visão real: até 10×.
+    // A alternância de cores acompanha a velocidade selecionada.
     const BASE_COLOR_DURATION = 4500;
     const BLUE_COLOR = "#40A5FF";
     const RED_COLOR = "#FF3030";
@@ -231,7 +272,6 @@
 
     function updateSpeed(value) {
       currentSpeed = Number(value);
-      speedValue.textContent = currentSpeed + "×";
 
       const mixerComponent = model.components["animation-mixer"];
       if (mixerComponent && mixerComponent.mixer) {

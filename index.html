@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realidade Aumentada - Indução Eletromagnética</title>
+
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #status {
+      position: fixed;
+      z-index: 9999;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      font: 14px Arial, sans-serif;
+      border-radius: 8px;
+      pointer-events: none;
+    }
+
+    /* Controle horizontal fixo na parte inferior da tela do celular. */
+    #speedPanel {
+      position: fixed;
+      z-index: 10000;
+      left: max(14px, env(safe-area-inset-left));
+      right: max(14px, env(safe-area-inset-right));
+      bottom: max(14px, env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      padding: 10px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.76);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 12px;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      touch-action: pan-y;
+    }
+
+    #speedLabels {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .speed-label {
+      font-size: 12px;
+      font-weight: bold;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+
+    .speed-label span {
+      display: block;
+      margin-top: 2px;
+      font-size: 10px;
+      font-weight: normal;
+      opacity: 0.9;
+    }
+
+    #speedSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      width: 100%;
+      height: 24px;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      touch-action: pan-y;
+    }
+
+    #speedSlider::-webkit-slider-runnable-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.38);
+      border-radius: 999px;
+    }
+
+    #speedSlider::-moz-range-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.38);
+      border-radius: 999px;
+    }
+
+    #speedSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      margin-top: -8px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #40A5FF;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+
+    #speedSlider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #40A5FF;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+
+    #speedSlider:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 4px;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 360px) {
+      #speedPanel {
+        left: 8px;
+        right: 8px;
+        padding: 9px 10px 10px;
+      }
+      .speed-label {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="status">Iniciando realidade aumentada...</div>
+
+  <div id="speedPanel" aria-label="Controle entre visão didática e visão real">
+    <div id="speedLabels">
+      <div class="speed-label">DIDÁTICO<span>(lento)</span></div>
+      <div class="speed-label" style="text-align: right">REAL<span>(rápido)</span></div>
+    </div>
+    <input
+      id="speedSlider"
+      type="range"
+      min="1"
+      max="10"
+      step="1"
+      value="1"
+      aria-label="Arraste da visão didática, mais lenta, para a visão real, mais rápida">
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: https://raw.githubusercontent.com/UnidadeSolus/Electromagnetic-Induction-RA-4/main/IFRJ.mind;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false">
+
+    <a-assets timeout="30000">
+      <a-asset-item
+        id="magneticFieldModel"
+        src="https://raw.githubusercontent.com/UnidadeSolus/Electromagnetic-Induction-RA-4/main/Electromagnetic-Induction-3D.glb">
+      </a-asset-item>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-gltf-model
+        id="magneticField"
+        src="#magneticFieldModel"
+        position="0 0 0.01"
+        rotation="0 0 0"
+        scale="0.38 0.38 0.38"
+        animation-mixer="clip: *; loop: repeat; timeScale: 1"
+        color-cycle-sync>
+      </a-gltf-model>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const status = document.getElementById("status");
+    const scene = document.querySelector("a-scene");
+    const model = document.getElementById("magneticField");
+    const speedSlider = document.getElementById("speedSlider");
+
+    let markerFound = false;
+    let modelLoaded = false;
+    let currentSpeed = 1;
+
+    // O ciclo de cores acompanha o tempo real do AnimationMixer.
+    // Assim, a mudança de cor permanece sincronizada mesmo quando
+    // o controle de velocidade altera o ritmo da animação.
+    const ANIMATION_CYCLE_DURATION = 9;
+    const COLOR_CHANGE_TIME = 4.5;
+    const BLUE_COLOR = "#40A5FF";
+    const RED_COLOR = "#FF3030";
+
+    /*
+      Os nomes das malhas do GLB não identificam diretamente os semicírculos
+      (Aneis_...) nem os cones (Cone_vagao_grosso). Por isso, a seleção é feita
+      pelos nomes dos MATERIAIS do arquivo:
+        - Semicirculos_cor_animada
+        - Cone_azul
+        - Cone_vermelho
+    */
+    AFRAME.registerComponent("color-cycle-sync", {
+      init: function () {
+        this.colorMaterials = new Set();
+        this.currentColor = null;
+        this.onModelLoaded = this.collectMaterials.bind(this);
+        this.el.addEventListener("model-loaded", this.onModelLoaded);
+      },
+
+      collectMaterials: function () {
+        const gltfObject = this.el.getObject3D("mesh");
+        this.colorMaterials.clear();
+
+        if (!gltfObject) {
+          console.warn("Não foi possível localizar a malha do GLB para controlar as cores.");
+          return;
+        }
+
+        gltfObject.traverse((object) => {
+          if (!object.isMesh || !object.material) return;
+
+          const materials = Array.isArray(object.material)
+            ? object.material
+            : [object.material];
+
+          materials.forEach((material) => {
+            if (!material || !material.color) return;
+
+            const materialName = (material.name || "").toLowerCase();
+
+            const isTargetMaterial =
+              materialName.includes("semicirculos_cor_animada") ||
+              materialName.includes("cone_azul") ||
+              materialName.includes("cone_vermelho");
+
+            if (isTargetMaterial) {
+              this.colorMaterials.add(material);
+            }
+          });
+        });
+
+        console.log(
+          "Materiais encontrados para alternância de cores:",
+          Array.from(this.colorMaterials).map((material) => material.name)
+        );
+
+        // O modelo sempre começa azul.
+        this.applyColor("blue");
+      },
+
+      applyColor: function (colorName) {
+        if (this.currentColor === colorName) return;
+
+        const hexColor = colorName === "blue" ? BLUE_COLOR : RED_COLOR;
+
+        this.colorMaterials.forEach((material) => {
+          material.color.set(hexColor);
+          material.needsUpdate = true;
+        });
+
+        this.currentColor = colorName;
+        console.log("Cor aplicada ao modelo:", colorName);
+      },
+
+      tick: function () {
+        if (this.colorMaterials.size === 0) return;
+
+        const mixerComponent = this.el.components["animation-mixer"];
+        const mixer = mixerComponent && mixerComponent.mixer;
+
+        if (!mixer) return;
+
+        // O AnimationMixer avança na mesma escala de tempo da animação GLB.
+        const animationTime =
+          ((mixer.time % ANIMATION_CYCLE_DURATION) + ANIMATION_CYCLE_DURATION) %
+          ANIMATION_CYCLE_DURATION;
+
+        const desiredColor =
+          animationTime < COLOR_CHANGE_TIME ? "blue" : "red";
+
+        this.applyColor(desiredColor);
+      },
+
+      remove: function () {
+        this.el.removeEventListener("model-loaded", this.onModelLoaded);
+        this.colorMaterials.clear();
+      }
+    });
+
+    function updateStatus() {
+      if (markerFound && modelLoaded) {
+        status.textContent = "Marcador encontrado! Modelo 3D carregado.";
+      } else if (markerFound && !modelLoaded) {
+        status.textContent = "Marcador encontrado! Aguardando o modelo 3D...";
+      } else if (!markerFound && modelLoaded) {
+        status.textContent = "Modelo 3D carregado. Aponte a câmera para o marcador IFRJ.";
+      }
+    }
+
+    function updateSpeed(value) {
+      currentSpeed = Number(value);
+
+      const mixerComponent = model.components["animation-mixer"];
+      if (mixerComponent && mixerComponent.mixer) {
+        mixerComponent.mixer.timeScale = currentSpeed;
+      } else {
+        model.setAttribute("animation-mixer", "timeScale", currentSpeed);
+      }
+    }
+
+    speedSlider.addEventListener("input", () => {
+      updateSpeed(speedSlider.value);
+    });
+
+    scene.addEventListener("loaded", () => {
+      status.textContent = "Cena iniciada. Aguardando câmera e modelo 3D...";
+    });
+
+    scene.addEventListener("arReady", () => {
+      status.textContent = "Câmera pronta. Aponte para o marcador IFRJ.";
+    });
+
+    scene.addEventListener("arError", (event) => {
+      status.textContent = "Erro ao iniciar a realidade aumentada.";
+      console.error("Erro MindAR:", event);
+    });
+
+    scene.addEventListener("targetFound", () => {
+      markerFound = true;
+      updateStatus();
+    });
+
+    scene.addEventListener("targetLost", () => {
+      markerFound = false;
+      updateStatus();
+    });
+
+    model.addEventListener("model-loaded", () => {
+      modelLoaded = true;
+      model.setAttribute("scale", "0.38 0.38 0.38");
+      model.setAttribute("position", "0 0 0.01");
+
+      const gltf = model.getObject3D("mesh");
+      console.log(
+        "Animações GLB:",
+        gltf?.animations?.map((animation) => ({
+          nome: animation.name,
+          duração: animation.duration
+        }))
+      );
+
+      updateSpeed(speedSlider.value);
+      updateStatus();
+    });
+
+    model.addEventListener("model-error", (event) => {
+      status.textContent = "Erro ao carregar o modelo 3D. Verifique o arquivo GLB.";
+      console.error("Erro no carregamento do GLB:", event);
+    });
+
+    window.addEventListener("error", (event) => {
+      console.error("Erro JavaScript:", event.message);
+    });
+  </script>
+</body>
+</html>

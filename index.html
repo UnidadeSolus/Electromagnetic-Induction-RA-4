@@ -180,7 +180,7 @@
       <a-gltf-model
         id="magneticField"
         src="#magneticFieldModel"
-        position="0 0 0.1"
+        position="0 0 0.01"
         rotation="0 0 0"
         scale="0.38 0.38 0.38"
         animation-mixer="clip: *; loop: repeat; timeScale: 1">
@@ -311,7 +311,7 @@
     model.addEventListener("model-loaded", () => {
       modelLoaded = true;
       model.setAttribute("scale", "0.38 0.38 0.38");
-      model.setAttribute("position", "0 0 0.1");
+      model.setAttribute("position", "0 0 0.01");
 
       const gltf = model.getObject3D("mesh");
       console.log("Animações GLB:", gltf?.animations?.map(a => ({ nome: a.name, duração: a.duration })));
